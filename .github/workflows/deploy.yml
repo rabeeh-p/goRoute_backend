@@ -47,41 +47,46 @@ jobs:
           docker build -t ${{ secrets.DOCKER_USERNAME }}/goroute:latest --build-arg SERVICE=web .
           docker push ${{ secrets.DOCKER_USERNAME }}/goroute:latest
 
-      - name: Deploy to AWS EC2
-        env:
-          AWS_KEY: ${{ secrets.AWS_KEY }}
-          AWS_IP: ${{ secrets.AWS_IP }}
-          AWS_USER: ${{ secrets.AWS_USER }}
+      - name: Setup SSH Key & Known Hosts
         run: |
-          # Write the AWS SSH private key to a file and secure it
-          printf "%s" "$AWS_KEY" > go_route_pjt1.pem
-          chmod 600 go_route_pjt1.pem
+          # Ensure correct formatting of SSH private key
+          echo "${{ secrets.AWS_KEY }}" | tr -d '\r' > aws.pem
+          chmod 600 aws.pem
+          
+          # Create .ssh directory & add AWS to known_hosts
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.AWS_IP }} >> ~/.ssh/known_hosts
 
-          # Copy the .env file to the AWS instance
-          scp -o StrictHostKeyChecking=no -i go_route_pjt1.pem .env "$AWS_USER@$AWS_IP:/home/$AWS_USER/.env"
+      - name: Secure Copy .env to AWS
+        run: |
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i aws.pem .env "$AWS_USER@$AWS_IP:/home/$AWS_USER/.env"
 
-          # SSH into the AWS instance and run the deployment commands
-          ssh -o StrictHostKeyChecking=no -i go_route_pjt1.pem "$AWS_USER@$AWS_IP" <<EOF
+      - name: Deploy to AWS EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i aws.pem "$AWS_USER@$AWS_IP" <<EOF
           set -e
-          echo "Starting deployment on AWS instance"
+          echo "🚀 Starting deployment on AWS instance..."
 
-          # Log in to Docker on the remote host
-          echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          # Ensure Docker is running
+          sudo systemctl start docker || true
+
+          # Log in to Docker
+          echo "${{ secrets.DOCKER_PASSWORD }}" | sudo -S docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
           # Remove any existing container named 'goroute'
-          docker rm -f goroute || true
+          sudo docker rm -f goroute || true
 
           # Pull the latest image from Docker Hub
-          docker pull ${{ secrets.DOCKER_USERNAME }}/goroute:latest
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/goroute:latest
 
           # Create a Docker network (if it doesn't exist)
-          docker network create goroute || true
+          sudo docker network create goroute || true
 
           # Start Redis
-          docker run -d --name redis --network goroute -p 6379:6379 redis:latest
+          sudo docker run -d --name redis --network goroute -p 6379:6379 redis:latest
 
           # Start Postgres
-          docker run -d \
+          sudo docker run -d \
             --name postgres-db \
             -e POSTGRES_DB=goroute_pjt \
             -e POSTGRES_USER=postgres \
@@ -92,7 +97,7 @@ jobs:
             postgres:latest
 
           # Start the application container
-          docker run -d \
+          sudo docker run -d \
             --name goroute \
             --network goroute \
             -p 8000:8000 \
@@ -104,8 +109,5 @@ jobs:
             --restart unless-stopped \
             ${{ secrets.DOCKER_USERNAME }}/goroute:latest
 
-          echo "Deployment completed!"
+          echo "✅ Deployment completed successfully!"
           EOF
-
-
-
