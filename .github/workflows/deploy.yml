@@ -54,7 +54,7 @@ jobs:
           AWS_USER: ${{ secrets.AWS_USER }}
         run: |
           # Write the AWS SSH private key to a file and secure it
-          echo "$AWS_KEY" > aws.pem
+          printf "%s" "$AWS_KEY" > aws.pem
           chmod 600 aws.pem
 
           # Copy the .env file to the AWS instance
