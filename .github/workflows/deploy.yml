@@ -54,14 +54,14 @@ jobs:
           AWS_USER: ${{ secrets.AWS_USER }}
         run: |
           # Write the AWS SSH private key to a file and secure it
-          printf "%s" "$AWS_KEY" > aws.pem
-          chmod 600 aws.pem
+          printf "%s" "$AWS_KEY" > go_route_pjt1.pem
+          chmod 600 go_route_pjt1.pem
 
           # Copy the .env file to the AWS instance
-          scp -o StrictHostKeyChecking=no -i aws.pem .env "$AWS_USER@$AWS_IP:/home/$AWS_USER/.env"
+          scp -o StrictHostKeyChecking=no -i go_route_pjt1.pem .env "$AWS_USER@$AWS_IP:/home/$AWS_USER/.env"
 
           # SSH into the AWS instance and run the deployment commands
-          ssh -o StrictHostKeyChecking=no -i aws.pem "$AWS_USER@$AWS_IP" <<EOF
+          ssh -o StrictHostKeyChecking=no -i go_route_pjt1.pem "$AWS_USER@$AWS_IP" <<EOF
           set -e
           echo "Starting deployment on AWS instance"
 
@@ -106,3 +106,6 @@ jobs:
 
           echo "Deployment completed!"
           EOF
+
+
+
