@@ -63,14 +63,12 @@ jobs:
           echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           
           docker rm -f goroute || true
-
           docker rm -f postgres-db || true
           docker rm -f redis || true
           
           docker pull ${{secrets.DOCKER_USERNAME}}/goroute:latest || true
           
           docker network create goroute || true
-          
           
           docker run -d --name redis --network goroute -p 6379:6379 redis:latest || true
           
