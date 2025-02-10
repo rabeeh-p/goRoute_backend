@@ -86,7 +86,7 @@ jobs:
             --name goroute \
             --network goroute \
             -p 8000:8000 \
-            -e DB_HOST=db \
+            -e DB_HOST=postgres-db \
             -e DB_NAME=goroute_pjt \
             -e DB_USER=postgres \
             -e DB_PASSWORD=admin123 \
