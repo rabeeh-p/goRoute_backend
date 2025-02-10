@@ -73,14 +73,17 @@ jobs:
           docker run -d --name redis --network goroute -p 6379:6379 redis:latest || true
           
           docker run -d \
-            --name postgres-db \
-            -e POSTGRES_DB=goroute_pjt \
-            -e POSTGRES_USER=postgres \
-            -e POSTGRES_PASSWORD=admin123 \
-            -v postgres_data:/var/lib/postgresql/data \
-            -p 5432:5432 \
-            --restart unless-stopped \
-            postgres:latest
+          --name goroute \
+          --network goroute \
+          -p 8000:8000 \
+          -e DB_HOST=db \      # Now "db" resolves to your PostgreSQL container
+          -e DB_NAME=goroute_pjt \
+          -e DB_USER=postgres \
+          -e DB_PASSWORD=admin123 \
+          -e SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+          --restart unless-stopped \
+          ${{secrets.DOCKER_USERNAME}}/goroute:latest
+
           
           docker run -d \
             --name goroute \
