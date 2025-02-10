@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          python-version: '3.11.1'
 
       - name: Create .env file
         run: |
@@ -20,7 +22,16 @@ jobs:
           echo "DB_PASSWORD=${{secrets.DB_PASSWORD}}" >> .env
           echo "DB_PORT=${{secrets.DB_PORT}}" >> .env
           echo "DB_USER=${{secrets.DB_USER}}" >> .env
+          echo "EMAIL_HOST=${{secrets.EMAIL_HOST}}" >> .env
+          echo "EMAIL_HOST_PASSWORD=${{secrets.EMAIL_HOST_PASSWORD}}" >> .env
+          echo "EMAIL_HOST_USER=${{secrets.EMAIL_HOST_USER}}" >> .env
+          echo "EMAIL_PORT=${{secrets.EMAIL_PORT}}" >> .env
+          echo "EMAIL_USE_TLS=${{secrets.EMAIL_USE_TLS}}" >> .env
+          echo "RAZORPAY_KEY_ID=${{secrets.RAZORPAY_KEY_ID}}" >> .env
+          echo "RAZORPAY_KEY_SECRET=${{secrets.RAZORPAY_KEY_SECRET}}" >> .env
           echo "SECRET_KEY=${{secrets.SECRET_KEY}}" >> .env
+          echo "SOCIAL_AUTH_GOOGLE_CLIENT_ID=${{secrets.SOCIAL_AUTH_GOOGLE_CLIENT_ID}}" >> .env
+          echo "SOCIAL_AUTH_GOOGLE_SECRET=${{secrets.SOCIAL_AUTH_GOOGLE_SECRET}}" >> .env
 
       - name: Login to Docker
         uses: docker/login-action@v2
@@ -30,7 +41,7 @@ jobs:
 
       - name: Build and push to Docker
         run: |
-          docker build -t ${{secrets.DOCKER_USERNAME}}/goroute:latest .
+          docker build -t ${{secrets.DOCKER_USERNAME}}/goroute:latest --build-arg SERVICE=web .
           docker push ${{secrets.DOCKER_USERNAME}}/goroute:latest
 
       - name: Deploy to AWS EC2
@@ -38,6 +49,7 @@ jobs:
           AWS_KEY: ${{ secrets.AWS_KEY }}
           AWS_IP: ${{ secrets.AWS_IP }}
           AWS_USERNAME: ${{ secrets.AWS_USERNAME }}
+
         run: |
           echo "$AWS_KEY" > aws.pem
           chmod 600 aws.pem
@@ -47,26 +59,23 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i aws.pem "$AWS_USERNAME@$AWS_IP" << EOF
           set -e
           echo "Starting deployment on AWS instance"
-
+          
           echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-          docker network inspect goroute >/dev/null 2>&1 || docker network create goroute
-
+          
           docker rm -f goroute || true
+
           docker rm -f postgres-db || true
           docker rm -f redis || true
-
+          
           docker pull ${{secrets.DOCKER_USERNAME}}/goroute:latest || true
-
-          docker run -d \
-            --name redis \
-            --network goroute \
-            -p 6379:6379 \
-            redis:latest
-
+          
+          docker network create goroute || true
+          
+          
+          docker run -d --name redis --network goroute -p 6379:6379 redis:latest || true
+          
           docker run -d \
             --name postgres-db \
-            --network goroute \
             -e POSTGRES_DB=goroute_pjt \
             -e POSTGRES_USER=postgres \
             -e POSTGRES_PASSWORD=admin123 \
@@ -74,7 +83,7 @@ jobs:
             -p 5432:5432 \
             --restart unless-stopped \
             postgres:latest
-
+          
           docker run -d \
             --name goroute \
             --network goroute \
