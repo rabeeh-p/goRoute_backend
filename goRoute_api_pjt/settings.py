@@ -97,7 +97,10 @@ MIDDLEWARE = [
 ]
 
 
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://api.goroute.site",
+    "https://www.api.goroute.site"
+]
 
 
 
