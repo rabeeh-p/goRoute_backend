@@ -107,15 +107,15 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGINS = True
 
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",   
-# ]
-
 CORS_ALLOWED_ORIGINS = [
-    "https://goroute.site",  # Production frontend
-    "http://localhost:5173",  # Local frontend
-    "https://api.goroute.site",  # API server
+    "http://localhost:5173",   
 ]
+
+# CORS_ALLOWED_ORIGINS = [
+#     "https://goroute.site",  # Production frontend
+#     "http://localhost:5173",  # Local frontend
+#     "https://api.goroute.site",  # API server
+# ]
 
 # CORS_ALLOW_CREDENTIALS = True
 
