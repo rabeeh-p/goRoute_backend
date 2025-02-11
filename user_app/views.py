@@ -419,30 +419,166 @@ class SeatBookingView(APIView):
 
 class PaymentSuccessAPIView(APIView):
    
-    
-    
 
-   
+
+    # def post(self, request, *args, **kwargs):
+    #     try:
+    #         data = request.data if hasattr(request, 'data') else json.loads(request.body)
+
+    #         payment_id = data.get('payment_id')
+    #         order_id = data.get('order_id')
+    #         signature = data.get('signature')
+
+    #         if not payment_id or not order_id or not signature:
+    #             return JsonResponse({'error': 'Payment ID, Order ID, and Signature are required.'}, status=400)
+
+    #         order = Order.objects.filter(razorpay_order_id=order_id).first()
+
+    #         if not order:
+    #             return JsonResponse({'error': 'Order not found.'}, status=404)
+
+    #         razorpay_key_id = os.getenv('RAZORPAY_KEY_ID')
+    #         razorpay_key_secret = os.getenv('RAZORPAY_KEY_SECRET')
+    #         client = razorpay.Client(auth=(razorpay_key_id, razorpay_key_secret))
+
+    #         try:
+    #             client.utility.verify_payment_signature({
+    #                 'razorpay_order_id': order_id,
+    #                 'razorpay_payment_id': payment_id,
+    #                 'razorpay_signature': signature
+    #             })
+    #         except razorpay.errors.SignatureVerificationError:
+    #             return JsonResponse({'error': 'Payment verification failed.'}, status=400)
+
+    #         order.status = 'confirmed'
+    #         order.save()
+ 
+            
+
+    #         seat_numbers = order.selected_seats
+    #         if not seat_numbers:
+    #             return JsonResponse({'error': 'No seats specified in the order.'}, status=400)
+
+    #         booked_seats = []
+    #         total_amount = Decimal(0)
+
+    #         for seat_number in seat_numbers:
+    #             seat = Seat.objects.create(
+    #                 bus=order.bus,
+    #                 seat_number=seat_number,
+    #                 status='booked',
+    #                 from_city=order.from_city,
+    #                 to_city=order.to_city,
+    #                 date=order.date
+    #             )
+
+
+
+    #             ticket_amount = Decimal(order.amount) / Decimal(len(seat_numbers))
+    #             ticket = Ticket.objects.create(
+    #                 order=order,
+    #                 seat=seat,
+    #                 amount=ticket_amount,
+    #                 status='confirmed'
+    #             )
+
+    #             booked_seats.append(ticket)
+    #             total_amount += ticket.amount
+
+    #         order.amount = total_amount
+    #         order.save()
+
+    #         super_admin = CustomUser.objects.filter(role='super_admin').first()
+    #         if super_admin:
+    #             admin_wallet, _ = Wallet.objects.get_or_create(user=super_admin)
+
+    #             admin_credit = total_amount * Decimal('0.05')  
+    #             admin_wallet.credit(admin_credit)
+                
+
+    #             Transaction.objects.create(
+    #                 wallet=admin_wallet,
+    #                 amount=admin_credit,
+    #                 transaction_type='credit',
+    #                 description=f"Admin credited with 5% of the total booking amount: {admin_credit:.2f}"
+    #             )
+
+    #             bus_owner = CustomUser.objects.get(id=order.bus.bus_owner_id)
+    #             bus_owner_wallet, _ = Wallet.objects.get_or_create(user=bus_owner)
+
+    #             bus_owner_credit = total_amount * Decimal('0.95')   
+    #             bus_owner_wallet.credit(bus_owner_credit)
+
+    #             Transaction.objects.create(
+    #                 wallet=bus_owner_wallet,
+    #                 amount=bus_owner_credit,
+    #                 transaction_type='credit',
+    #                 description=f"Bus owner credited with 95% of the total booking amount: {bus_owner_credit:.2f}"
+    #             )
+
+            
+    #         user_email = order.email
+    #         seat_details = "\n".join([f"Seat Number: {ticket.seat.seat_number}, Status: {ticket.status}" for ticket in booked_seats])
+    #         email_subject = "Your Ticket Booking Confirmation"
+    #         email_message = f"""
+    #         Dear {order.name},
+
+    #         Your booking has been confirmed. Below are your ticket details:
+
+    #         Seats:
+    #         {seat_details}
+
+    #         Total Amount: {total_amount}
+
+    #         Thank you for booking with us!
+
+    #         Best Regards,
+    #         The GoRoute Team
+    #         """
+
+    #         send_mail(
+    #             subject=email_subject,
+    #             message=email_message,
+    #             from_email=settings.DEFAULT_FROM_EMAIL,
+    #             recipient_list=[user_email],
+    #         )
+
+    #         return JsonResponse({
+    #             'message': 'Payment successful and order confirmed.',
+    #             'seat_numbers': [ticket.seat.seat_number for ticket in booked_seats],
+    #             'total_amount': float(total_amount)
+    #         })
+
+    #     except Exception as e:
+    #         return JsonResponse({'error': str(e)}, status=500)
 
 
     def post(self, request, *args, **kwargs):
         try:
+            print("Received POST request")
             data = request.data if hasattr(request, 'data') else json.loads(request.body)
+            print(f"Request Data: {data}")
 
             payment_id = data.get('payment_id')
             order_id = data.get('order_id')
             signature = data.get('signature')
+            print(f"Payment ID: {payment_id}, Order ID: {order_id}, Signature: {signature}")
 
             if not payment_id or not order_id or not signature:
+                print("Missing required payment details")
                 return JsonResponse({'error': 'Payment ID, Order ID, and Signature are required.'}, status=400)
 
             order = Order.objects.filter(razorpay_order_id=order_id).first()
+            print(f"Order Found: {order}")
 
             if not order:
+                print("Order not found")
                 return JsonResponse({'error': 'Order not found.'}, status=404)
 
             razorpay_key_id = os.getenv('RAZORPAY_KEY_ID')
             razorpay_key_secret = os.getenv('RAZORPAY_KEY_SECRET')
+            print(f"Razorpay Keys - ID: {razorpay_key_id}, Secret: {razorpay_key_secret}")
+
             client = razorpay.Client(auth=(razorpay_key_id, razorpay_key_secret))
 
             try:
@@ -451,22 +587,27 @@ class PaymentSuccessAPIView(APIView):
                     'razorpay_payment_id': payment_id,
                     'razorpay_signature': signature
                 })
+                print("Payment signature verified successfully")
             except razorpay.errors.SignatureVerificationError:
+                print("Payment verification failed")
                 return JsonResponse({'error': 'Payment verification failed.'}, status=400)
 
             order.status = 'confirmed'
             order.save()
- 
-            
+            print("Order status updated to confirmed")
 
             seat_numbers = order.selected_seats
+            print(f"Selected Seats: {seat_numbers}")
+            
             if not seat_numbers:
+                print("No seats specified in the order")
                 return JsonResponse({'error': 'No seats specified in the order.'}, status=400)
 
             booked_seats = []
-            total_amount = Decimal(0)
+            total_amount = Decimal('0.00')
 
             for seat_number in seat_numbers:
+                print(f"Booking Seat: {seat_number}")
                 seat = Seat.objects.create(
                     bus=order.bus,
                     seat_number=seat_number,
@@ -475,8 +616,7 @@ class PaymentSuccessAPIView(APIView):
                     to_city=order.to_city,
                     date=order.date
                 )
-
-
+                print(f"Seat created: {seat}")
 
                 ticket_amount = Decimal(order.amount) / Decimal(len(seat_numbers))
                 ticket = Ticket.objects.create(
@@ -485,20 +625,27 @@ class PaymentSuccessAPIView(APIView):
                     amount=ticket_amount,
                     status='confirmed'
                 )
+                print(f"Ticket created: {ticket}")
 
                 booked_seats.append(ticket)
                 total_amount += ticket.amount
 
             order.amount = total_amount
             order.save()
+            print(f"Total order amount updated: {total_amount}")
 
+            # Handle Admin Wallet
             super_admin = CustomUser.objects.filter(role='super_admin').first()
+            print(f"Super Admin: {super_admin}")
+
             if super_admin:
                 admin_wallet, _ = Wallet.objects.get_or_create(user=super_admin)
+                print(f"Admin Wallet: {admin_wallet}")
 
-                admin_credit = total_amount * Decimal('0.05')  
-                admin_wallet.credit(admin_credit)
-                
+                admin_credit = total_amount * Decimal('0.05')
+                admin_wallet.balance = Decimal(str(admin_wallet.balance)) + admin_credit
+                admin_wallet.save()
+                print(f"Admin credited: {admin_credit}")
 
                 Transaction.objects.create(
                     wallet=admin_wallet,
@@ -506,21 +653,29 @@ class PaymentSuccessAPIView(APIView):
                     transaction_type='credit',
                     description=f"Admin credited with 5% of the total booking amount: {admin_credit:.2f}"
                 )
+                print("Admin transaction recorded")
 
-                bus_owner = CustomUser.objects.get(id=order.bus.bus_owner_id)
-                bus_owner_wallet, _ = Wallet.objects.get_or_create(user=bus_owner)
+            # Handle Bus Owner Wallet
+            bus_owner = CustomUser.objects.get(id=order.bus.bus_owner_id)
+            print(f"Bus Owner: {bus_owner}")
 
-                bus_owner_credit = total_amount * Decimal('0.95')   
-                bus_owner_wallet.credit(bus_owner_credit)
+            bus_owner_wallet, _ = Wallet.objects.get_or_create(user=bus_owner)
+            print(f"Bus Owner Wallet: {bus_owner_wallet}")
 
-                Transaction.objects.create(
-                    wallet=bus_owner_wallet,
-                    amount=bus_owner_credit,
-                    transaction_type='credit',
-                    description=f"Bus owner credited with 95% of the total booking amount: {bus_owner_credit:.2f}"
-                )
+            bus_owner_credit = total_amount * Decimal('0.95')
+            bus_owner_wallet.balance = Decimal(str(bus_owner_wallet.balance)) + bus_owner_credit
+            bus_owner_wallet.save()
+            print(f"Bus Owner credited: {bus_owner_credit}")
 
-            
+            Transaction.objects.create(
+                wallet=bus_owner_wallet,
+                amount=bus_owner_credit,
+                transaction_type='credit',
+                description=f"Bus owner credited with 95% of the total booking amount: {bus_owner_credit:.2f}"
+            )
+            print("Bus owner transaction recorded")
+
+            # Send Confirmation Email
             user_email = order.email
             seat_details = "\n".join([f"Seat Number: {ticket.seat.seat_number}, Status: {ticket.status}" for ticket in booked_seats])
             email_subject = "Your Ticket Booking Confirmation"
@@ -539,13 +694,15 @@ class PaymentSuccessAPIView(APIView):
             Best Regards,
             The GoRoute Team
             """
-
+            
+            print(f"Sending email to: {user_email}")
             send_mail(
                 subject=email_subject,
                 message=email_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user_email],
             )
+            print("Email sent successfully")
 
             return JsonResponse({
                 'message': 'Payment successful and order confirmed.',
@@ -554,6 +711,7 @@ class PaymentSuccessAPIView(APIView):
             })
 
         except Exception as e:
+            print(f"Error occurred: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
 
         
